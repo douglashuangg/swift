@@ -102,6 +102,7 @@ while True:
 
     # Press 'q' to terminate program
     if cv2.waitKey(1) & 0xff == ord('q'):
+        ser.send_break()
         ser.close()
         break
 
