@@ -1,7 +1,19 @@
 import cv2
+import serial
+import time
 
 #Video Source
-cap = cv2.VideoCapture(1)
+cap = cv2.VideoCapture(0)
+
+# set serial port
+ser = serial.Serial('COM5', 115200)
+if not ser.is_open:
+    ser.open()
+
+# set past coordinates
+prev_x = 0
+prev_y = 0
+y_total_angle = 90
 
 # mosse tracker
 #Low accuracy, high speed
@@ -36,8 +48,11 @@ def drawBox(img, bbox):
     cv2.putText(img,str((x+w)),(75,75),cv2.FONT_HERSHEY_TRIPLEX,0.7,(0,255,0),2)
     # Y co-ordinates
     cv2.putText(img,str((y+h)),(150,75),cv2.FONT_HERSHEY_TRIPLEX,0.7,(0,255,0),2)
+    return cx, cy
 
 while True:
+    cx = 0
+    cy = 0
     timer = cv2.getTickCount()
     # Displaying sucess if object detected
     success, img = cap.read()
@@ -46,17 +61,47 @@ while True:
 
     # Displaying if object is detected or lost
     if success:
-        drawBox(img,bbox)
+        cx, cy = drawBox(img,bbox)
+        if prev_x == 0 and prev_y == 0:
+            prev_x = cx
+            prev_y = cy
     else:
          cv2.putText(img, "Lost",(75,50),cv2.FONT_HERSHEY_TRIPLEX,0.7,(0,0,255),2)
 
     # Getting fps
     #fps = cv2.getTickFrequency()/(cv2.getTickCount()-timer)
     #cv2.putText(img,str(int(fps)),(75,50),cv2.FONT_HERSHEY_TRIPLEX,0.7,(0,0,255),2)
-    cv2.imshow("Tracking",img)
+    cv2.imshow("Tracking", img)
+
+    # sending data to arduino
+    angle = (cx - prev_x)/320 * 45
+    y_angle = (cy - prev_y)/220 * 25
+    # if(angle > 10 or angle < -10):
+    #     coord_str = f"{angle}, {y_angle}\n"
+    #     print(angle)
+
+    #     ser.write(coord_str.encode())
+    #     prev_x = cx
+
+    if(y_angle > 3 or y_angle < -3):
+        if(y_angle < 14 and y_angle > -14):
+            y_total_angle -= y_angle
+            coord_str = f"{y_total_angle}\n"
+            print(y_total_angle)
+            print("angle", y_angle)
+
+            ser.write(coord_str.encode())
+            prev_y = cy
+  
+
+    if ser.in_waiting > 0:
+        data = ser.readline()
+        print("Received from Arduino:", data)
+
 
     # Press 'q' to terminate program
     if cv2.waitKey(1) & 0xff == ord('q'):
+        ser.close()
         break
 
 # Program end statements
