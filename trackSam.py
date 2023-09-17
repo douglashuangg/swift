@@ -69,14 +69,14 @@ def calculate_image_height(DIAGONAL_FOV_DEGREES, FOCAL_LENGTH_MM):
 
     return image_height_mm
 
-def calculate_tilt_angle(current_object_y, image_height):
+def calculate_tilt_angle(current_object_y, image_height, prev_y):
     center_y = image_height / 2
     angle_per_pixel = DIAGONAL_FOV_DEGREES / image_height
 
     # Initialize new_angle with the center position
     new_angle = (SERVO_MIN_ANGLE + SERVO_MAX_ANGLE) / 2
 
-    if prev_y is not None:
+    # if prev_y is not None:
         # Calculate the angle adjustment based on the object's position change
         object_y_change = current_object_y - prev_y
         angle_adjustment = object_y_change * angle_per_pixel
@@ -88,7 +88,7 @@ def calculate_tilt_angle(current_object_y, image_height):
     new_angle = max(SERVO_MIN_ANGLE, min(new_angle, SERVO_MAX_ANGLE))
 
     # Update the previous y-value for the next iteration
-    prev_object_y = current_object_y
+    prev_y = current_object_y
 
     return new_angle
 
@@ -135,8 +135,8 @@ while True:
     cv2.imshow("Tracking", img)
 
     # Image height print
-    image_height = calculate_image_height()
-    print(f"Estimated image height: {image_height:.2f} mm")
+    image_height = calculate_image_height(DIAGONAL_FOV_DEGREES, FOCAL_LENGTH_MM)
+    # print(f"Estimated image height: {image_height:.2f} mm")
 
     # sending data to arduino
     x_angle = (cx - prev_x)/320 * 45
@@ -149,7 +149,8 @@ while True:
     #     prev_x = cx
 
     tilt_angle = calculate_tilt_angle(cy, image_height)
-    coord_str = f"{y_total_angle}\n"
+    print(tilt_angle)
+    coord_str = f"{tilt_angle}\n"
     ser.write(coord_str.encode())
 
 
