@@ -13,13 +13,15 @@ if not ser.is_open:
 # set past coordinates
 prev_x = 0
 prev_y = 0
+cx = 0
+cy = 0
 y_total_angle = 90
 
 # mosse tracker
 #Low accuracy, high speed
-#tracker = cv2.legacy.TrackerMOSSE_create()                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           b
+tracker = cv2.legacy.TrackerMOSSE_create()                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           
 #High accuracy, low speed
-tracker = cv2.TrackerCSRT_create()
+# tracker = cv2.TrackerCSRT_create()
 
 #Bounding box selection
 success, img = cap.read()
@@ -52,8 +54,6 @@ def drawBox(img, bbox):
     return cx, cy
 
 while True:
-    cx = 0
-    cy = 0
     timer = cv2.getTickCount()
     # Displaying sucess if object detected
     success, img = cap.read()
@@ -76,7 +76,7 @@ while True:
 
     # sending data to arduino
     angle = (cx - prev_x)/320 * 45
-    y_angle = (cy - prev_y)/220 * 25
+    y_angle = (cy - prev_y)/240 * 25
     # if(angle > 10 or angle < -10):
     #     coord_str = f"{angle}, {y_angle}\n"
     #     print(angle)
@@ -84,15 +84,14 @@ while True:
     #     ser.write(coord_str.encode())
     #     prev_x = cx
 
-    if(y_angle > 3 or y_angle < -3):
-        if(y_angle < 14 and y_angle > -14):
-            y_total_angle -= y_angle
-            coord_str = f"{y_total_angle}\n"
-            print(y_total_angle)
-            print("angle", y_angle)
+    if(y_angle > 6 or y_angle < -6):
+        y_total_angle -= y_angle
+        coord_str = f"{y_total_angle}\n"
+        print(y_total_angle)
+        print("angle", y_angle)
 
-            ser.write(coord_str.encode())
-            prev_y = cy
+        ser.write(coord_str.encode())
+        prev_y = cy
   
 
     if ser.in_waiting > 0:
