@@ -45,9 +45,10 @@ def drawBox(img, bbox):
     #Display if tracking
     cv2.putText(img, "Tracking",(75,50),cv2.FONT_HERSHEY_TRIPLEX,0.7,(0,255,0),2)
     # X co-ordinates
-    cv2.putText(img,str((x+w)),(75,75),cv2.FONT_HERSHEY_TRIPLEX,0.7,(0,255,0),2)
+    cv2.putText(img,str(cx),(75,75),cv2.FONT_HERSHEY_TRIPLEX,0.7,(0,255,0),2)
+    cv2.putText(img,str(cy),(150,75),cv2.FONT_HERSHEY_TRIPLEX,0.7,(0,255,0),2)
+
     # Y co-ordinates
-    cv2.putText(img,str((y+h)),(150,75),cv2.FONT_HERSHEY_TRIPLEX,0.7,(0,255,0),2)
     return cx, cy
 
 while True:
