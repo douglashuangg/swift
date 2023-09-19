@@ -1,12 +1,14 @@
 import cv2
 import serial
 import time
+import numpy as np
 
 #Video Source
 cap = cv2.VideoCapture(0)
 
+
 # set serial port
-ser = serial.Serial('COM5', 115200)
+ser = serial.Serial('COM4', 115200)
 if not ser.is_open:
     ser.open()
 
@@ -16,12 +18,23 @@ prev_y = 0
 cx = 0
 cy = 0
 y_total_angle = 90
+total_x_change = 0
+sent_x = 0
+
+#  kalman filter
+prev_x = 0
+prev_y = 0
+kf = cv2.KalmanFilter(4, 2)  # 4 states (x, y, dx, dy), 2 measurements (x, y)
+kf.measurementMatrix = np.array([[1, 0, 0, 0], [0, 1, 0, 0]], np.float32)
+kf.transitionMatrix = np.array([[1, 0, 1, 0], [0, 1, 0, 1], [0, 0, 1, 0], [0, 0, 0, 1]], np.float32)
+kf.processNoiseCov = 0.03 * np.eye(4)
+kf.measurementNoiseCov = 0.1 * np.eye(2)
 
 # mosse tracker
 #Low accuracy, high speed
-tracker = cv2.legacy.TrackerMOSSE_create()                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           
+# tracker = cv2.legacy.TrackerMOSSE_create()                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           
 #High accuracy, low speed
-# tracker = cv2.TrackerCSRT_create()
+tracker = cv2.TrackerCSRT_create()
 
 #Bounding box selection
 success, img = cap.read()
@@ -43,7 +56,7 @@ def drawBox(img, bbox):
         cy = (y + y + h) // 2
         cv2.circle(img,(cx,cy),5,(0,0,255),-1)
         cv2.line(img,(cx,0),(cx,480),(0,0,255),2)
-        a=int(cx)//65
+        a=int(cx)
     #Display if tracking
     cv2.putText(img, "Tracking",(75,50),cv2.FONT_HERSHEY_TRIPLEX,0.7,(0,255,0),2)
     # X co-ordinates
@@ -60,33 +73,83 @@ while True:
 
     success, bbox = tracker.update(img)
 
+    ret, frame = cap.read()
+    if not ret:
+        break
+    height, width, _ = frame.shape
+
+    # Calculate the center coordinates
+    center_x = width // 2
+
+    # Define the width of the range (100 pixels on each side)
+    range_width = 50
+
+    # Calculate the left and right boundaries of the range
+    left_boundary = center_x - range_width
+    right_boundary = center_x + range_width
+    # print("Center", center_x)
+    # print("left", left_boundary)
+    # print("right", right_boundary)
+
+    # Initialize variables for tracking
+    
+
+    # if success:
+    #     cx, cy = drawBox(img, bbox)
+    #     # Update the Kalman filter with the new measurement
+    #     measurement = np.array([[cx], [cy]], np.float32)
+    #     kf.correct(measurement)
+
+    #     # Predict the next state
+    #     prediction = kf.predict()
+    #     predicted_x, predicted_y = prediction[0][0], prediction[1][0]
+
+    #     prev_x = predicted_x
+    #     prev_y = predicted_y
+
+    # else:
+    #     # If the object is lost, use the predicted position from the Kalman filter
+    #     predicted_x, predicted_y = prev_x, prev_y
+
+    #     # Display "Lost" text
+    #     cv2.putText(img, "Lost", (75, 50), cv2.FONT_HERSHEY_TRIPLEX, 0.7, (0, 0, 255), 2)
+
+    #     # Use predicted_x and predicted_y for further processing
+
+
     # Displaying if object is detected or lost
     if success:
         cx, cy = drawBox(img,bbox)
+            # print("servo moved")
+            # prev_x = cx
+            # sent_x = 0
         if prev_x == 0 and prev_y == 0:
             prev_x = cx
             prev_y = cy
     else:
          cv2.putText(img, "Lost",(75,50),cv2.FONT_HERSHEY_TRIPLEX,0.7,(0,0,255),2)
 
+
     # Getting fps
     #fps = cv2.getTickFrequency()/(cv2.getTickCount()-timer)
     #cv2.putText(img,str(int(fps)),(75,50),cv2.FONT_HERSHEY_TRIPLEX,0.7,(0,0,255),2)
     cv2.imshow("Tracking", img)
+  
 
     # sending data to arduino
-    angle = (cx - prev_x)/320 * 45
+    angle = (cx - prev_x)/320 * 35
     y_angle = (cy - prev_y)/240 * 25
-    # if(angle > 10 or angle < -10):
-    #     coord_str = f"{angle}, {y_angle}\n"
-    #     print(angle)
+    if((angle > 6 or angle < -6)):
+        coord_str = f"{angle}, {y_total_angle}\n"
+        print(angle)
 
-    #     ser.write(coord_str.encode())
-    #     prev_x = cx
+        ser.write(coord_str.encode())
+        prev_x = cx
+        sent_x = 1
 
     if(y_angle > 6 or y_angle < -6):
         y_total_angle -= y_angle
-        coord_str = f"{y_total_angle}\n"
+        coord_str = f"{angle}, {y_total_angle}\n"
         print(y_total_angle)
         print("angle", y_angle)
 
